@@ -76,8 +76,13 @@ public class ArmoredElytra {
         // determines which attribute is applied (assuming you pass the itemstacks in that order)
         LinkedHashMap<Attribute, ItemAttributeModifiers.Entry> attributes = new LinkedHashMap<>();
         for (ItemStack itemStack : itemStacks) {
-            itemStack.getItem().components().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY)
-                    .modifiers().forEach(a -> attributes.put(a.attribute().value(), a));
+            if (itemStack.is(ItemTags.CHEST_ARMOR)) {
+                ArmorItem armorItem = (ArmorItem) itemStack.getItem();
+                armorItem.getDefaultAttributeModifiers().modifiers().forEach(a -> attributes.put(a.attribute().value(), a));
+            } else {
+                itemStack.getItem().components().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY)
+                        .modifiers().forEach(a -> attributes.put(a.attribute().value(), a));
+            }
         }
         for (ItemStack itemStack : itemStacks) {
             ItemAttributeModifiers attributeModifiers =

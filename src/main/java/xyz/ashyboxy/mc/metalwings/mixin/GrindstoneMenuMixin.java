@@ -1,13 +1,13 @@
 package xyz.ashyboxy.mc.metalwings.mixin;
 
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.level.block.LevelEvent;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -17,7 +17,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import xyz.ashyboxy.mc.metalwings.ArmoredElytra;
 
 @Mixin(GrindstoneMenu.class)
 public abstract class GrindstoneMenuMixin extends AbstractContainerMenu {
@@ -41,19 +40,18 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu {
         ItemStack input1 = this.repairSlots.getItem(0);
         ItemStack input2 = this.repairSlots.getItem(1);
 
-        CompoundTag customData =
-                input1.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        CompoundTag chestplateData = customData.getCompound(ArmoredElytra.CHESTPLATE_DATA.toString());
-
-        if (customData.getCompound(ArmoredElytra.ELYTRA_DATA.toString()).isEmpty() || chestplateData.isEmpty())
-            return;
         if (!input2.isEmpty()) {
             this.resultSlots.setItem(0, ItemStack.EMPTY);
             return;
         }
-        access.execute((l, b) -> this.resultSlots.setItem(0,
-                ItemStack.SINGLE_ITEM_CODEC.decode(l.registryAccess().createSerializationContext(NbtOps.INSTANCE)
-                        , chestplateData).getOrThrow().getFirst()));
+
+        Iterable<ItemStack> bundleContents = input1.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).items();
+        bundleContents.forEach(item -> {
+            if (item.is(ItemTags.CHEST_ARMOR)) {
+                this.resultSlots.setItem(0, item);
+                return;
+            }
+        });
     }
 
     @Mixin(GrindstoneMenu.class)
@@ -78,15 +76,16 @@ public abstract class GrindstoneMenuMixin extends AbstractContainerMenu {
 
         @Inject(method = "onTake", at = @At("HEAD"), cancellable = true)
         private void takeSeparatedChestplate(Player player, ItemStack stack, CallbackInfo ci) {
-            CompoundTag customData =
-                    ((GrindStoneMenuAccessor) field_16780).getRepairSlots().getItem(0).getOrDefault(DataComponents.CUSTOM_DATA,
-                            CustomData.EMPTY).copyTag();
-            CompoundTag elytraData = customData.getCompound(ArmoredElytra.ELYTRA_DATA.toString());
-            if (elytraData.isEmpty() || customData.getCompound(ArmoredElytra.CHESTPLATE_DATA.toString()).isEmpty()) return;
-            val$access.execute((level, blockPos) -> {
-                level.levelEvent(LevelEvent.SOUND_GRINDSTONE_USED, blockPos, 0);
-                ((GrindStoneMenuAccessor) field_16780).getRepairSlots().setItem(0,
-                        ItemStack.SINGLE_ITEM_CODEC.decode(level.registryAccess().createSerializationContext(NbtOps.INSTANCE), elytraData).getOrThrow().getFirst());
+            Iterable<ItemStack> bundleContents =
+                    ((GrindStoneMenuAccessor) field_16780).getRepairSlots().getItem(0).getOrDefault(DataComponents.BUNDLE_CONTENTS,
+                            BundleContents.EMPTY).items();
+            bundleContents.forEach(item -> {
+                if (item.is(Items.ELYTRA)) {
+                    val$access.execute((level, blockPos) -> {
+                        level.levelEvent(LevelEvent.SOUND_GRINDSTONE_USED, blockPos, 0);
+                        ((GrindStoneMenuAccessor) field_16780).getRepairSlots().setItem(0, item);
+                    });
+                }
             });
             ci.cancel();
         }

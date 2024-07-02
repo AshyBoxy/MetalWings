@@ -6,7 +6,8 @@
 		"AnvilMenuMixin",
 		"GrindstoneMenuMixin",
 		"GrindstoneMenuMixin$GrindStoneMenuAccessor",
-		"GrindstoneMenuMixin$ResultSlotMixin"
+		"GrindstoneMenuMixin$ResultSlotMixin",
+		"EntityLavaHurtMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
